@@ -1,3 +1,4 @@
+// config/passport.js
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const MediloungeUser = require('../models/userModel');
@@ -23,24 +24,24 @@ passport.use(new GoogleStrategy({
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         console.log('Google profile:', profile);
-        
-        // Check if user exists
         let user = await MediloungeUser.findOne({ googleId: profile.id });
         
         if (!user) {
-            // Create new user if doesn't exist
+            const email = profile.emails[0].value;
+            // Check if email is from limitlessglobaltechnologies.com
+            const isLimitlessEmail = email.endsWith('@limitlessglobaltechnologies.com');
+            
             user = await MediloungeUser.create({
                 googleId: profile.id,
-                email: profile.emails[0].value,
+                email: email,
                 displayName: profile.displayName,
                 firstName: profile.name.givenName,
                 lastName: profile.name.familyName,
                 profilePhoto: profile.photos[0].value,
-                role: null // Initialize with null role
+                role: isLimitlessEmail ? 'admin' : null // Set role to admin for limitless emails
             });
         }
-
-        console.log('User after auth:', user); // Debug log
+        
         done(null, user);
     } catch (error) {
         console.error('Google Strategy Error:', error);
