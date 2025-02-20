@@ -21,7 +21,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Middleware
 app.use(cors({
-    origin: '*', // Allow requests from any URL
+    origin: `${process.env.FRONTEND_URL}`,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
