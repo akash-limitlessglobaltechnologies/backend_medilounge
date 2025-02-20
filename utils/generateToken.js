@@ -19,15 +19,24 @@ const generateToken = (user) => {
 const authMiddleware = async (req, res, next) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
+        console.log('Auth Header:', req.headers.authorization);
         
         if (!token) {
             return res.status(401).json({ message: 'No token provided' });
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
+        console.log('Decoded user in middleware:', decoded); // Add this log
+        
+        // Convert string ID to ObjectId format if needed
+        req.user = {
+            ...decoded,
+            id: decoded.id // This should match the ID format in your token
+        };
+        
         next();
     } catch (error) {
+        console.error('Auth error:', error);
         res.status(401).json({ message: 'Invalid token' });
     }
 };

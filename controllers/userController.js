@@ -1,5 +1,37 @@
-const MediloungeUser = require('../models/userModel');
+
 const { generateToken } = require('../utils/generateToken');
+
+const MediloungeUser = require('../models/userModel');
+const Organization = require('../models/organizationModel');
+
+const deleteAccount = async (req, res) => {
+    try {
+        // Get the user
+        const user = await MediloungeUser.findById(req.user.id);
+        
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found',
+                success: false
+            });
+        }
+
+        // Delete user
+        await MediloungeUser.findByIdAndDelete(req.user.id);
+
+        res.status(200).json({
+            message: 'Account deleted successfully',
+            success: true
+        });
+    } catch (error) {
+        console.error('Error deleting account:', error);
+        res.status(500).json({
+            message: 'Error deleting account',
+            success: false,
+            error: error.message
+        });
+    }
+};
 
 // Get user profile
 const getProfile = async (req, res) => {
@@ -109,40 +141,45 @@ const completeRegistration = async (req, res) => {
 };
 
 // Delete user account
-const deleteAccount = async (req, res) => {
-    try {
-        const userExists = await MediloungeUser.findById(req.user.id);
-        if (!userExists) {
-            return res.status(404).json({ 
-                message: 'User not found',
-                success: false 
-            });
-        }
+// In userController.js
+// const deleteAccount = async (req, res) => {
+//     try {
+//         // Get the user's role to determine which profile to delete
+//         const user = await User.findById(req.user.id);
+        
+//         if (!user) {
+//             return res.status(404).json({
+//                 message: 'User not found',
+//                 success: false
+//             });
+//         }
 
-        await MediloungeUser.findByIdAndDelete(req.user.id);
+//         // Delete organization profile if exists
+//         if (user.role === 'organization') {
+//             await Organization.findOneAndDelete({ userId: req.user.id });
+//         }
+        
+//         // Delete doctor profile if exists
+//         if (user.role === 'doctor') {
+//             await Doctor.findOneAndDelete({ userId: req.user.id });
+//         }
 
-        req.logout((err) => {
-            if (err) {
-                return res.status(500).json({ 
-                    message: 'Error in logout process',
-                    success: false 
-                });
-            }
-            res.clearCookie('jwt');
-            res.status(200).json({ 
-                message: 'Account deleted successfully',
-                success: true 
-            });
-        });
-    } catch (error) {
-        console.error('Delete account error:', error);
-        res.status(500).json({ 
-            message: 'Error deleting account',
-            success: false,
-            error: error.message 
-        });
-    }
-};
+//         // Finally delete the user account
+//         await User.findByIdAndDelete(req.user.id);
+
+//         res.status(200).json({
+//             message: 'Account deleted successfully',
+//             success: true
+//         });
+//     } catch (error) {
+//         console.error('Error deleting account:', error);
+//         res.status(500).json({
+//             message: 'Error deleting account',
+//             success: false,
+//             error: error.message
+//         });
+//     }
+// };
 
 // Logout user
 const logout = async (req, res) => {
