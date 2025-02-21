@@ -17,11 +17,14 @@ router.get('/google/callback',
     }),
     async (req, res) => {
         try {
+            if (!req.user) {
+                throw new Error('Authentication failed');
+            }
             const token = generateToken(req.user);
             res.redirect(`${process.env.FRONTEND_URL}/google-callback?token=${token}`);
         } catch (error) {
             console.error('Callback error:', error);
-            res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
+            res.redirect(`${process.env.FRONTEND_URL}/login?error=${encodeURIComponent(error.message)}`);
         }
     }
 );

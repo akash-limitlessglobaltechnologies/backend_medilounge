@@ -21,7 +21,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Middleware
 app.use(cors({
-    origin: `${process.env.FRONTEND_URL}`,
+    origin: process.env.FRONTEND_URL,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -33,9 +33,9 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always true for Vercel
+        sameSite: 'none', // Required for cross-domain
         maxAge: 24 * 60 * 60 * 1000,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         httpOnly: true
     }
 }));
@@ -48,6 +48,16 @@ app.use(passport.session());
 app.get('/', (req, res) => {
     res.status(200).json({ message: 'Welcome to the API akash' });
   });
+
+
+  // Add this route temporarily to debug
+app.get('/debug-env', (req, res) => {
+    res.json({
+        backendUrl: process.env.BACKEND_URL,
+        frontendUrl: process.env.FRONTEND_URL,
+        nodeEnv: process.env.NODE_ENV
+    });
+});
   
 
 // Mount routes
