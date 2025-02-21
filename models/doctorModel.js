@@ -77,8 +77,8 @@ const doctorSchema = new mongoose.Schema({
         },
         licenseNumber: {
             type: String,
-            required: true,
-            unique: true
+            required: false,  // Made optional
+            sparse: true     // Added sparse index
         },
         experience: {
             type: Number,
@@ -88,6 +88,9 @@ const doctorSchema = new mongoose.Schema({
 
         // Expertise & Skills
         expertise: [expertiseSchema],
+        languages: [{        // Added languages array
+            type: String
+        }],
 
         // Pricing & Availability
         consultationFee: {
@@ -107,7 +110,17 @@ const doctorSchema = new mongoose.Schema({
         },
         portfolioItems: [portfolioItemSchema]
     }
-}, { timestamps: true });
+}, { 
+    timestamps: true,
+    strict: false  // Added to allow additional fields
+});
+
+// Add compound index to prevent duplicate license numbers when present
+doctorSchema.index({ 'info.licenseNumber': 1 }, { 
+    unique: true, 
+    sparse: true,
+    partialFilterExpression: { 'info.licenseNumber': { $type: 'string' } }
+});
 
 const Doctor = mongoose.model('Doctor', doctorSchema);
 module.exports = Doctor;

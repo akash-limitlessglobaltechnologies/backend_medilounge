@@ -23,6 +23,22 @@ passport.use(new GoogleStrategy({
     proxy: true
 }, async (accessToken, refreshToken, profile, done) => {
     try {
+
+        // Add detailed logging
+        console.log('Google Strategy Initialization:', {
+            backendUrl: process.env.BACKEND_URL,
+            hasClientId: !!process.env.GOOGLE_CLIENT_ID,
+            hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+            callbackUrl: `${process.env.BACKEND_URL}/auth/google/callback`
+        });
+        
+        console.log('Profile received:', {
+            id: profile.id,
+            email: profile.emails?.[0]?.value,
+            displayName: profile.displayName
+        });
+
+
         console.log('OAuth callback received:', {
             accessToken: !!accessToken,
             profile: {
@@ -52,6 +68,11 @@ passport.use(new GoogleStrategy({
         done(null, user);
     } catch (error) {
         console.error('Google Strategy Error:', error);
+        console.error('Google Strategy Error:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
         done(error);
     }
 }));
