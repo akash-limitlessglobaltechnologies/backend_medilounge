@@ -23,6 +23,13 @@ passport.use(new GoogleStrategy({
     proxy: true
 }, async (accessToken, refreshToken, profile, done) => {
     try {
+        console.log('OAuth callback received:', {
+            accessToken: !!accessToken,
+            profile: {
+                id: profile.id,
+                email: profile.emails[0].value
+            }
+        });
         console.log('Google profile:', profile);
         let user = await MediloungeUser.findOne({ googleId: profile.id });
         
