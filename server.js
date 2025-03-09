@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const passport = require('./config/passport');
 const cors = require('cors');
-const csvRoutes = require('./routes/csvRoutes');
+
 // Import routes
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -20,7 +20,7 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("Connected to MongoDB"))
     .catch((error) => console.error("MongoDB connection error:", error));
 
-    // Middleware
+// Middleware
 app.use(cors({
     origin: [process.env.FRONTEND_URL, 'http://localhost:3000'],
     credentials: true,
@@ -48,10 +48,9 @@ app.use(passport.session());
 // Root route
 app.get('/', (req, res) => {
     res.status(200).json({ message: 'Welcome to the API akash' });
-  });
+});
 
-
-  // Add this route temporarily to debug
+// Add this route temporarily to debug
 app.get('/debug-env', (req, res) => {
     res.json({
         backendUrl: process.env.BACKEND_URL,
@@ -59,7 +58,6 @@ app.get('/debug-env', (req, res) => {
         nodeEnv: process.env.NODE_ENV
     });
 });
-  
 
 // Mount routes
 app.use('/auth', authRoutes);
@@ -67,10 +65,8 @@ app.use('/api', userRoutes);
 app.use('/api/admin', adminRoutes); // Admin routes without role check
 app.use('/organization', organizationRoutes);
 app.use('/doctor', doctorRoutes);
-// app.use('/api/csv', csvRoutes);
 app.use('/api/annotations', annotationRoutes);
 
-// Error handling middleware
 // Error handling middleware
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
