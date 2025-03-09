@@ -4,13 +4,14 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const passport = require('./config/passport');
 const cors = require('cors');
-
+const csvRoutes = require('./routes/csvRoutes');
 // Import routes
 const userRoutes = require('./routes/userRoutes');
 const authRoutes = require('./routes/authRoutes');
 const organizationRoutes = require('./routes/organizationRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const annotationRoutes = require('./routes/annotationRoutes');
 
 const app = express();
 
@@ -19,9 +20,9 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("Connected to MongoDB"))
     .catch((error) => console.error("MongoDB connection error:", error));
 
-// Middleware
+    // Middleware
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: [process.env.FRONTEND_URL, 'http://localhost:3000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -66,6 +67,8 @@ app.use('/api', userRoutes);
 app.use('/api/admin', adminRoutes); // Admin routes without role check
 app.use('/organization', organizationRoutes);
 app.use('/doctor', doctorRoutes);
+app.use('/api/csv', csvRoutes);
+app.use('/api/annotations', annotationRoutes);
 
 // Error handling middleware
 // Error handling middleware

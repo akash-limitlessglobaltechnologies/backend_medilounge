@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-
 const linkSchema = new mongoose.Schema({
     title: {
         type: String,
@@ -9,6 +8,21 @@ const linkSchema = new mongoose.Schema({
     url: {
         type: String,
         required: true
+    },
+    assignedDoctor: {
+        doctorEmail: String,
+        status: {
+            type: String,
+            enum: ['pending', 'assigned', 'completed'],
+            default: 'pending'
+        },
+        assignedDate: {
+            type: Date
+        },
+        completionDate: {
+            type: Date
+        },
+        notes: String
     }
 });
 
@@ -21,7 +35,26 @@ const projectSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    links: [linkSchema]
+    projectKey: {
+        type: String,
+        unique: true
+    },
+    links: [linkSchema],
+    assignedDoctor: {
+        doctorEmail: String,
+        status: {
+            type: String,
+            enum: ['pending', 'assigned', 'completed'],
+            default: 'pending'
+        },
+        assignedDate: {
+            type: Date
+        },
+        completionDate: {
+            type: Date
+        },
+        notes: String
+    }
 });
 
 const organizationSchema = new mongoose.Schema({
@@ -44,7 +77,7 @@ const organizationSchema = new mongoose.Schema({
         required: true
     },
     projects: [projectSchema]
-});
+}, { timestamps: true });
 
 const Organization = mongoose.model('Organization', organizationSchema);
 module.exports = Organization;

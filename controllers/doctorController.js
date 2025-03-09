@@ -1,4 +1,5 @@
 const Doctor = require('../models/doctorModel');
+const Organization = require('../models/organizationModel');
 
 // Create doctor profile
 const createProfile = async (req, res) => {
@@ -228,11 +229,192 @@ const getProfileById = async (req, res) => {
     }
 };
 
+// Get doctor assignments
+const getDoctorAssignments = async (req, res) => {
+    try {
+        const doctorEmail = req.user.email; // Get doctor's email from authenticated user
+
+        const assignments = await Organization.aggregate([
+            // Unwind projects array
+            { $unwind: '$projects' },
+            // Unwind links array
+            { $unwind: '$projects.links' },
+            // Match links assigned to the doctor
+            {
+                $match: {
+                    'projects.links.assignedDoctor.doctorEmail': doctorEmail
+                }
+            },
+            // Group by project and collect relevant links
+            {
+                $group: {
+                    _id: '$projects._id',
+                    organizationName: { $first: '$name' },
+                    projectName: { $first: '$projects.name' },
+                    projectDescription: { $first: '$projects.description' },
+                    projectKey: { $first: '$projects.projectKey' },
+                    links: {
+                        $push: {
+                            _id: '$projects.links._id',
+                            title: '$projects.links.title',
+                            url: '$projects.links.url',
+                            status: '$projects.links.assignedDoctor.status',
+                            notes: '$projects.links.assignedDoctor.notes',
+                            assignedDate: '$projects.links.assignedDoctor.assignedDate',
+                            completionDate: '$projects.links.assignedDoctor.completionDate'
+                        }
+                    }
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            assignments
+        });
+    } catch (error) {
+        console.error('Error fetching doctor assignments:', error);
+        res.status(500).json({ 
+            message: 'Error fetching assignments',
+            success: false,
+            error: error.message 
+        });
+    }
+};
+
+// Save draft assignment notes
+const saveDraftAssignment = async (req, res) => {
+    try {
+        const { projectId, linkId, notes } = req.body;
+        const doctorEmail = req.user.email; // Get doctor's email from authenticated user
+
+        // Find the organization with the matching project and link assigned to this doctor
+        const organization = await Organization.findOne({
+            'projects._id': projectId,
+            'projects.links._id': linkId,
+            'projects.links.assignedDoctor.doctorEmail': doctorEmail
+        });
+
+        if (!organization) {
+            return res.status(404).json({ 
+                message: 'Assignment not found or unauthorized',
+                success: false 
+            });
+        }
+
+        // Find the project and link
+        const project = organization.projects.id(projectId);
+        if (!project) {
+            return res.status(404).json({ 
+                message: 'Project not found',
+                success: false 
+            });
+        }
+
+        const link = project.links.id(linkId);
+        if (!link || link.assignedDoctor.doctorEmail !== doctorEmail) {
+            return res.status(403).json({ 
+                message: 'Unauthorized to update this assignment',
+                success: false 
+            });
+        }
+
+        // Update notes
+        link.assignedDoctor.notes = notes;
+        await organization.save();
+
+        res.status(200).json({
+            message: 'Notes saved successfully',
+            success: true,
+            data: {
+                projectId,
+                linkId,
+                notes
+            }
+        });
+    } catch (error) {
+        console.error('Error saving assignment notes:', error);
+        res.status(500).json({ 
+            message: 'Error saving notes',
+            success: false,
+            error: error.message 
+        });
+    }
+};
+
+// Complete assignment
+const completeAssignment = async (req, res) => {
+    try {
+        const { projectId, linkId, notes } = req.body;
+        const doctorEmail = req.user.email; // Get doctor's email from authenticated user
+
+        // Find the organization with the matching project and link assigned to this doctor
+        const organization = await Organization.findOne({
+            'projects._id': projectId,
+            'projects.links._id': linkId,
+            'projects.links.assignedDoctor.doctorEmail': doctorEmail
+        });
+
+        if (!organization) {
+            return res.status(404).json({ 
+                message: 'Assignment not found or unauthorized',
+                success: false 
+            });
+        }
+
+        // Find the project and link
+        const project = organization.projects.id(projectId);
+        if (!project) {
+            return res.status(404).json({ 
+                message: 'Project not found',
+                success: false 
+            });
+        }
+
+        const link = project.links.id(linkId);
+        if (!link || link.assignedDoctor.doctorEmail !== doctorEmail) {
+            return res.status(403).json({ 
+                message: 'Unauthorized to update this assignment',
+                success: false 
+            });
+        }
+
+        // Update status, notes, and completion date
+        link.assignedDoctor.status = 'completed';
+        link.assignedDoctor.notes = notes;
+        link.assignedDoctor.completionDate = new Date();
+        
+        await organization.save();
+
+        res.status(200).json({
+            message: 'Assignment completed successfully',
+            success: true,
+            data: {
+                projectId,
+                linkId,
+                status: 'completed',
+                notes,
+                completionDate: link.assignedDoctor.completionDate
+            }
+        });
+    } catch (error) {
+        console.error('Error completing assignment:', error);
+        res.status(500).json({ 
+            message: 'Error completing assignment',
+            success: false,
+            error: error.message 
+        });
+    }
+};
+
 module.exports = {
     createProfile,
     editProfile,
     getDoctorList,
     deleteProfile,
     getProfile,
-    getProfileById
+    getProfileById,
+    getDoctorAssignments,
+    saveDraftAssignment,
+    completeAssignment
 };
