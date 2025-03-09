@@ -67,7 +67,7 @@ app.use('/api', userRoutes);
 app.use('/api/admin', adminRoutes); // Admin routes without role check
 app.use('/organization', organizationRoutes);
 app.use('/doctor', doctorRoutes);
-app.use('/api/csv', csvRoutes);
+// app.use('/api/csv', csvRoutes);
 app.use('/api/annotations', annotationRoutes);
 
 // Error handling middleware
