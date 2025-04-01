@@ -1,238 +1,156 @@
 const Annotation = require('../models/Annotation');
 
-// Validate 12-character alphanumeric key
-const validateKey = (key) => {
-  const keyRegex = /^[a-zA-Z0-9]{12}$/;
-  return keyRegex.test(key);
-};
-
-// Add a new annotation
-exports.addAnnotation = async (req, res) => {
+// Get annotations by passkey
+exports.getAnnotations = async (req, res) => {
   try {
-    const { key, annotation } = req.body;
+    const { passkey } = req.query;
     
-    // Validate key format
-    if (!key || !validateKey(key)) {
+    if (!passkey || !/^[a-zA-Z0-9]{12}$/.test(passkey)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Key must be a 12-character alphanumeric string' 
+        message: 'Invalid passkey format. Must be 12 alphanumeric characters.' 
       });
     }
     
-    if (!annotation || !annotation.uid) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Missing required fields (annotation with uid)' 
+    // Find the most recent annotation document for this passkey
+    const annotation = await Annotation.findOne({ passkey })
+      .sort({ updatedAt: -1 })
+      .select('annotations imageName imageUrl');
+    
+    if (!annotation) {
+      return res.status(200).json({ 
+        success: true, 
+        message: 'No annotations found for this passkey',
+        annotations: [],
+        imageName: null,
+        imageUrl: null
       });
     }
-
-    // Check if document with this key exists
-    let userAnnotation = await Annotation.findOne({ key });
-
-    if (userAnnotation) {
-      // Check if annotation with this UID already exists
-      const existingAnnotation = userAnnotation.annotations.find(
-        anno => anno.uid === annotation.uid
-      );
-      
-      if (existingAnnotation) {
-        return res.status(400).json({
-          success: false,
-          message: 'Annotation with this UID already exists'
-        });
-      }
-      
-      // Add new annotation to existing document
-      userAnnotation.annotations.push(annotation);
-      userAnnotation.updatedAt = Date.now();
-      await userAnnotation.save();
-    } else {
-      // Create new document with this annotation
-      userAnnotation = new Annotation({
-        key,
-        annotations: [annotation]
-      });
-      await userAnnotation.save();
-    }
-
+    
     return res.status(200).json({
       success: true,
-      message: 'Annotation added successfully',
-      data: userAnnotation
+      annotations: annotation.annotations,
+      imageName: annotation.imageName,
+      imageUrl: annotation.imageUrl
     });
   } catch (error) {
-    console.error('Error adding annotation:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error adding annotation',
-      error: error.message
+    console.error('Error retrieving annotations:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Server error while retrieving annotations' 
     });
   }
 };
 
-// Update an existing annotation
-exports.updateAnnotation = async (req, res) => {
+// Create or update annotations
+exports.saveAnnotations = async (req, res) => {
   try {
-    const { key, annotationUID, updatedData } = req.body;
+    const { passkey, imageName, imageUrl, annotations } = req.body;
     
-    // Validate key format
-    if (!key || !validateKey(key)) {
+    if (!passkey || !/^[a-zA-Z0-9]{12}$/.test(passkey)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Key must be a 12-character alphanumeric string' 
+        message: 'Invalid passkey format. Must be 12 alphanumeric characters.' 
       });
     }
     
-    if (!annotationUID || !updatedData || !updatedData.uid) {
+    if (!annotations || !Array.isArray(annotations)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Missing required fields (annotationUID, updatedData with uid)' 
+        message: 'Annotations must be provided as an array' 
       });
     }
-
-    // Ensure UIDs match
-    if (annotationUID !== updatedData.uid) {
+    
+    if (!imageName || !imageUrl) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Image name and URL are required' 
+      });
+    }
+    
+    // Find existing annotation document or create a new one
+    let annotationDoc = await Annotation.findOne({ passkey });
+    
+    if (annotationDoc) {
+      // Update existing document
+      annotationDoc.annotations = annotations;
+      annotationDoc.imageName = imageName;
+      annotationDoc.imageUrl = imageUrl;
+      annotationDoc.updatedAt = Date.now();
+      
+      await annotationDoc.save();
+      
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Annotations updated successfully',
+        _id: annotationDoc._id
+      });
+    } else {
+      // Create new document
+      const newAnnotation = new Annotation({
+        passkey,
+        imageName,
+        imageUrl,
+        annotations
+      });
+      
+      await newAnnotation.save();
+      
+      return res.status(201).json({ 
+        success: true, 
+        message: 'Annotations saved successfully',
+        _id: newAnnotation._id
+      });
+    }
+  } catch (error) {
+    console.error('Error saving annotations:', error);
+    
+    // Mongoose validation error
+    if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
-        message: 'UID in updatedData must match annotationUID'
-      });
-    }
-
-    // Find document with this key
-    const userAnnotation = await Annotation.findOne({ key });
-
-    if (!userAnnotation) {
-      return res.status(404).json({
-        success: false,
-        message: 'No annotations found for this key'
+        message: 'Validation error',
+        errors: Object.values(error.errors).map(err => err.message)
       });
     }
     
-    // Find the specific annotation
-    const annotationIndex = userAnnotation.annotations.findIndex(
-      anno => anno.uid === annotationUID
-    );
-    
-    if (annotationIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Annotation with this UID not found'
-      });
-    }
-    
-    // Simply replace the entire annotation object
-    userAnnotation.annotations[annotationIndex] = updatedData;
-    userAnnotation.updatedAt = Date.now();
-    await userAnnotation.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Annotation updated successfully',
-      data: updatedData
-    });
-  } catch (error) {
-    console.error('Error updating annotation:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error updating annotation',
-      error: error.message
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Server error while saving annotations' 
     });
   }
 };
 
-// Delete an annotation
-exports.deleteAnnotation = async (req, res) => {
+// Delete annotations by passkey
+exports.deleteAnnotations = async (req, res) => {
   try {
-    const { key, annotationUID } = req.body;
+    const { passkey } = req.params;
     
-    // Validate key format
-    if (!key || !validateKey(key)) {
+    if (!passkey || !/^[a-zA-Z0-9]{12}$/.test(passkey)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Key must be a 12-character alphanumeric string' 
+        message: 'Invalid passkey format. Must be 12 alphanumeric characters.' 
       });
     }
     
-    if (!annotationUID) {
-      return res.status(400).json({ 
+    const result = await Annotation.deleteOne({ passkey });
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ 
         success: false, 
-        message: 'Missing required field (annotationUID)' 
-      });
-    }
-
-    // Find document with this key
-    const userAnnotation = await Annotation.findOne({ key });
-
-    if (!userAnnotation) {
-      return res.status(404).json({
-        success: false,
-        message: 'No annotations found for this key'
+        message: 'No annotations found for this passkey' 
       });
     }
     
-    // Find the specific annotation
-    const initialLength = userAnnotation.annotations.length;
-    userAnnotation.annotations = userAnnotation.annotations.filter(
-      anno => anno.uid !== annotationUID
-    );
-    
-    // Check if any annotation was removed
-    if (userAnnotation.annotations.length === initialLength) {
-      return res.status(404).json({
-        success: false,
-        message: 'Annotation with this UID not found'
-      });
-    }
-    
-    userAnnotation.updatedAt = Date.now();
-    await userAnnotation.save();
-
-    return res.status(200).json({
-      success: true,
-      message: 'Annotation deleted successfully'
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Annotations deleted successfully' 
     });
   } catch (error) {
-    console.error('Error deleting annotation:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error deleting annotation',
-      error: error.message
-    });
-  }
-};
-
-// Fetch all annotations for a key
-exports.fetchAllAnnotations = async (req, res) => {
-  try {
-    const { key } = req.query;
-    
-    // Validate key format
-    if (!key || !validateKey(key)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Key must be a 12-character alphanumeric string' 
-      });
-    }
-
-    const userAnnotation = await Annotation.findOne({ key });
-
-    if (!userAnnotation) {
-      return res.status(404).json({
-        success: false,
-        message: 'No annotations found for this key'
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: userAnnotation.annotations
-    });
-  } catch (error) {
-    console.error('Error fetching annotations:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error fetching annotations',
-      error: error.message
+    console.error('Error deleting annotations:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Server error while deleting annotations' 
     });
   }
 };

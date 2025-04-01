@@ -2,16 +2,33 @@ const express = require('express');
 const router = express.Router();
 const annotationController = require('../controllers/annotationController');
 
-// Route to add a new annotation
-router.post('/add', annotationController.addAnnotation);
+/**
+ * @route   GET /api/annotations/image
+ * @desc    Get annotations by passkey
+ * @access  Public
+ * @param   {string} passkey - 12-digit alphanumeric passkey
+ */
+router.get('/image', annotationController.getAnnotations);
 
-// Route to update an existing annotation
-router.put('/update', annotationController.updateAnnotation);
+/**
+ * @route   POST /api/annotations/image
+ * @desc    Create or update annotations
+ * @access  Public
+ * @body    {
+ *            passkey: string,
+ *            imageName: string,
+ *            imageUrl: string,
+ *            annotations: array
+ *          }
+ */
+router.post('/image', annotationController.saveAnnotations);
 
-// Route to delete an annotation
-router.delete('/delete', annotationController.deleteAnnotation);
-
-// Route to fetch all annotations for a key
-router.get('/fetchAll', annotationController.fetchAllAnnotations);
+/**
+ * @route   DELETE /api/annotations/image/:passkey
+ * @desc    Delete annotations by passkey
+ * @access  Public
+ * @param   {string} passkey - 12-digit alphanumeric passkey
+ */
+router.delete('/image/:passkey', annotationController.deleteAnnotations);
 
 module.exports = router;
