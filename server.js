@@ -12,6 +12,7 @@ const organizationRoutes = require('./routes/organizationRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const annotationRoutes = require('./routes/annotationRoutes');
+const aiCompanyRoutes = require('./routes/aiCompanyRoutes');
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use('/api', userRoutes);
 app.use('/api/admin', adminRoutes); // Admin routes without role check
 app.use('/organization', organizationRoutes);
 app.use('/doctor', doctorRoutes);
+app.use('/aicompany', aiCompanyRoutes);
 app.use('/api/annotations', annotationRoutes);
 
 // Error handling middleware

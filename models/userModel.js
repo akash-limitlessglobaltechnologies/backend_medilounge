@@ -17,7 +17,7 @@ const mediloungeUserSchema = new mongoose.Schema({
   profilePhoto: String,
   role: {
     type: String,
-    enum: ['admin', 'doctor', 'organization', null],
+    enum: ['admin', 'doctor', 'organization', 'aicompany', null],
     default: null
   },
   createdAt: {
@@ -29,7 +29,7 @@ const mediloungeUserSchema = new mongoose.Schema({
     default: Date.now
   }
 }, {
-  collection: 'mediloungeusers' // Changed collection name
+  collection: 'mediloungeusers'
 });
 
 const MediloungeUser = mongoose.model('MediloungeUser', mediloungeUserSchema);
